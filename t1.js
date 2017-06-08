@@ -4,19 +4,11 @@ module.exports={
         done();
     }
   , worker:(params,repeat,stop)=>{
-        console.log('task worker',params.iteration);
-        params.iteration++;
-
-        switch(params.iteration){
-            case 0:
-            case 1:
-                repeat(params,1);
-                break;
-            case 2:
-                repeat(params,3);
-                break;
-            default:
-                stop(params);
+        console.log('task worker',params.sequence);
+        if(params.sequence<10){
+            repeat();
+        }else{
+            stop();
         }
     }
   , after:(done)=>{

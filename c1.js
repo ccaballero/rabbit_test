@@ -12,9 +12,8 @@ amqp.connect('amqp://localhost',(error,connection)=>{
           , repeat=true
           , loop=0
           , params={
-                iteration:1
+                sequence:0
             }
-          , nodes=1
 
         task.before(()=>{
             async.until(
@@ -29,44 +28,45 @@ amqp.connect('amqp://localhost',(error,connection)=>{
                     },(error,queue)=>{
                         let correlationId=uuid.v4()
 
-                        for(let i=0;i<nodes;i++){
-                            channel.sendToQueue(name,
-                                new Buffer(JSON.stringify(params)
-                            ),{
-                                correlationId:correlationId
-                              , replyTo:replies
+                        channel.sendToQueue(name,
+                            new Buffer(JSON.stringify(params)
+                        ),{
+                            correlationId:correlationId
+                          , replyTo:replies
+                        });
+
+                        channel.assertQueue(replies,{
+                            durable:true
+                          , exclusive:false
+                        },(error,queue)=>{
+                            console.log('[x]');
+                            console.log('    name: %s',name);
+                            console.log('    correlationId: %s',correlationId);
+                            console.log('    replyTo: %s',replies);
+
+                            channel.consume(replies,(message)=>{
+                                let _message=JSON.parse(
+                                    message.content.toString())
+
+                                console.log('    [.] Got');
+
+                                repeat=(_message.action=='repeat');
+                                if(repeat){
+                                    params.sequence++;
+                                }
+
+                                done();
+                            },{
+                                noAck:true
                             });
-
-                            channel.assertQueue(replies,{
-                                durable:true
-                              , exclusive:false
-                            },(error,queue)=>{
-                                console.log('[x]');
-                                console.log('    name: %s',name);
-                                console.log('    correlationId: %s',correlationId);
-                                console.log('    replyTo: %s',replies);
-
-                                channel.consume(replies,(message)=>{
-                                    let _message=JSON.parse(
-                                        message.content.toString())
-
-                                    console.log('    [.] Got');
-                                    repeat=(_message.action=='repeat');
-                                    nodes=_message.nodes;
-                                    params=_message.params;
-
-                                    done();
-                                },{
-                                    noAck:true
-                                });
-                            });
-                        }
+                        });
                     });
 
                     loop++;
                 },
                 (error,results)=>{
                     task.after(()=>{
+                        params.sequence=0;
                         process.exit(0);
                     });
                 }
