@@ -1,12 +1,23 @@
-const amqp=require('amqplib/callback_api')
+const amqp=require('amqplib')
   , uuid=require('node-uuid')
-  , task=require('./t1')
+  , server='amqp://localhost'
+  , connection=undefined
+  , channel=undefined
 
-amqp.connect('amqp://localhost',(error,connection)=>{
-    connection.createChannel((error,channel)=>{
-        channel.prefetch(1);
+amqp.connect(server)
+    .then(function(conn){
+        connection=conn;
+        return conn.createChannel();
+    })
+    .then(function(ch){
+        ch.prefetch(1);
+        channel=ch;
+        return ch.assertQueue(key,
+    })
+    .then(function(
 
-        ['exclusive'].forEach((key)=>{
+
+        ['a','b','c','d','e'].forEach((key)=>{
             channel.assertQueue(key,{
                 durable:true
               , exclusive:false
@@ -15,11 +26,11 @@ amqp.connect('amqp://localhost',(error,connection)=>{
                     let name=message.fields.routingKey
                       , correlationId=message.properties.correlationId
                       , replyTo=message.properties.replyTo
+                      , task=require('./t/'+name)
                       , params=JSON.parse(message.content.toString())
                       , messages=[]
 
-                    console.log('[x]');
-                    console.log('    name: %s',name);
+                    console.log('[x] name: %s',name);
                     console.log('    correlationId: %s',correlationId);
                     console.log('    replyTo: %s',replyTo);
 

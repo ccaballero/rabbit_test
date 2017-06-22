@@ -1,10 +1,10 @@
 module.exports={
     before:(done)=>{
-        console.log('task before');
+        console.log('TASK BEFORE');
         done();
     }
   , worker:(params,repeat,stop)=>{
-        console.log('task worker',params.sequence);
+        console.log('TASK WORKER',params.sequence);
         if(params.sequence<10){
             repeat();
         }else{
@@ -12,7 +12,7 @@ module.exports={
         }
     }
   , after:(done)=>{
-        console.log('task after');
+        console.log('TASK AFTER');
         done();
     }
 };
