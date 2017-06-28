@@ -5,8 +5,8 @@ module.exports={
     }
   , worker:(params,repeat,stop)=>{
         console.log('TASK WORKER',params.sequence);
-        if(params.sequence<4){
-            console.log('A');
+        if(params.sequence<10){
+            console.log('B');
             repeat();
         }else{
             stop();

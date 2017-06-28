@@ -1,23 +1,11 @@
-const amqp=require('amqplib')
+const amqp=require('amqplib/callback_api')
   , uuid=require('node-uuid')
-  , server='amqp://localhost'
-  , connection=undefined
-  , channel=undefined
 
-amqp.connect(server)
-    .then(function(conn){
-        connection=conn;
-        return conn.createChannel();
-    })
-    .then(function(ch){
-        ch.prefetch(1);
-        channel=ch;
-        return ch.assertQueue(key,
-    })
-    .then(function(
+amqp.connect('amqp://localhost',(error,connection)=>{
+    connection.createChannel((error,channel)=>{
+        channel.prefetch(1);
 
-
-        ['a','b','c','d','e'].forEach((key)=>{
+        ['a','b'].forEach((key)=>{
             channel.assertQueue(key,{
                 durable:true
               , exclusive:false
