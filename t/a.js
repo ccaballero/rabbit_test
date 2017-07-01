@@ -1,6 +1,6 @@
 module.exports={
     before:(done)=>{
-        console.log('TASK BEFORE');
+        console.log('BEFORE A');
         done();
     }
   , worker:(params,repeat,stop)=>{
@@ -13,7 +13,7 @@ module.exports={
         }
     }
   , after:(done)=>{
-        console.log('TASK AFTER');
+        console.log('AFTER A');
         done();
     }
 };

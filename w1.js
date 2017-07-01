@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const amqp=require('amqplib/callback_api')
   , uuid=require('node-uuid')
 
@@ -19,6 +21,7 @@ amqp.connect('amqp://localhost',(error,connection)=>{
                       , messages=[]
 
                     console.log('[x] name: %s',name);
+                    console.log('    sequence: %s',params.sequence);
                     console.log('    correlationId: %s',correlationId);
                     console.log('    replyTo: %s',replyTo);
 

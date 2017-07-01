@@ -6,89 +6,98 @@ const express=require('express')
   , uuid=require('node-uuid')
   , async=require('async')
 
-function Runner(){}
+var sequence=0
+  , loop=0
+  , name=''
 
-Runner.prototype.run=function(name,task,replies){
-    amqp.connect('amqp://localhost',(error,connection)=>{
-        connection.createChannel((error,channel)=>{
-            let repeat=true
-              , loop=0
-              , params={
-                    sequence:0
-                }
+function Runner(n){
+    var self=this
 
-            task.before(()=>{
-                async.until(
-                    ()=>{
-                        return !repeat;
-                    },
-                    (done)=>{
-                        console.log('LOOP #%d',loop);
-                        channel.assertQueue(name,{
-                            durable:true
-                          , exclusive:false
-                        },(error,queue)=>{
-                            let correlationId=uuid.v4()
+    loop=0;
+    sequence=0
 
-                            channel.sendToQueue(name,
-                                new Buffer(JSON.stringify(params)
-                            ),{
-                                correlationId:correlationId
-                              , replyTo:replies
-                            });
+    console.log('Instantiate new runner ',n);
+    this.repeat=true;
+    name=n;
+};
 
-                            channel.assertQueue(replies,{
-                                durable:true
-                              , exclusive:false
-                            },(error,queue)=>{
-                                console.log('[x]');
-                                console.log('    name: %s',name);
-                                console.log('    correlationId: %s',correlationId);
-                                console.log('    replyTo: %s',replies);
+Runner.prototype.run=function(channel,replies){
+    let self=this
+      , before=require('./t/'+name).before
 
-                                channel.consume(replies,(message)=>{
-                                    let _message=JSON.parse(
-                                        message.content.toString())
+    before(function(){
+        async.until(
+            function(){
+                return !self.repeat;
+            },
+            function(done){
+                console.log('LOOP #%d',loop);
+                channel.assertQueue(name,{
+                    durable:true
+                  , exclusive:false
+                },function(error){
+                    let correlationId=uuid.v4()
 
-                                    console.log('    [.] Got');
+                    channel.sendToQueue(name,
+                        new Buffer(JSON.stringify({
+                            sequence:sequence
+                        })
+                    ),{
+                        correlationId:correlationId
+                      , replyTo:replies
+                    });
+                });
 
-                                    repeat=(_message.action=='repeat');
-                                    if(repeat){
-                                        params.sequence++;
-                                    }
+                channel.assertQueue(replies,{
+                    durable:true
+                  , exclusive:false
+                },function(error){
+                    let correlationId=''
 
-                                    done();
-                                },{
-                                    noAck:true
-                                });
-                            });
-                        });
+                    console.log('[x] name: %s',name);
+                    console.log('    correlationId: %s',correlationId);
+                    console.log('    replyTo: %s',replies);
 
-                        loop++;
-                    },
-                    (error,results)=>{
-                        task.after(()=>{
-                            params.sequence=0;
-                        });
-                    }
-                );
-            });
-        });
+                    channel.consume(replies,(message)=>{
+                        let _message=JSON.parse(
+                            message.content.toString())
+
+                        console.log('    [.] Got');
+
+                        self.repeat=(_message.action=='repeat');
+                        if(self.repeat){
+                            sequence++;
+                            done(null);
+                        }else if(_message.action=='stop'){
+                            let after=require('./t/'+name).after
+                            after(function(){});
+                        }
+                    },{
+                        noAck:true
+                    });
+                });
+
+                loop++;
+            },
+            function(error,results){}
+        );
     });
 }
 
 app.get('/',(request,response)=>{
     let tasks=request.query.t.split(',')
       , name=tasks[0]
-      , task=require('./t/'+name)
       , replies='replies'
-      , runner=new Runner()
 
-    try{
-        runner.run(name,task,replies);
-    }catch(error){
-        console.trace(error);
-    }
+    amqp.connect('amqp://localhost',function(error,connection){
+        connection.createChannel(function(error,channel){
+            try{
+                new Runner(name).run(channel,replies);
+            }catch(error){
+                console.trace(error);
+            }
+        });
+    });
 
     response.send('[OK]');
 });
